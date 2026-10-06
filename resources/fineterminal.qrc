@@ -1,5 +1,0 @@
-<RCC>
-    <qresource prefix="/">
-        <file alias="icons/fineterminal.svg">fineterminal.svg</file>
-    </qresource>
-</RCC>

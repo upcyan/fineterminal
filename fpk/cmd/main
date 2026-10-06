@@ -1,0 +1,101 @@
+#!/bin/bash
+# FineTerminal 生命周期管理: start | stop | status | restart
+LOG_FILE="${TRIM_PKGVAR}/info.log"
+PID_FILE="${TRIM_PKGVAR}/app.pid"
+export SOCKET_PATH="${TRIM_APPDEST}/app.sock"
+export HTTP_DIR="${TRIM_APPDEST}/www"
+export PYTHONUNBUFFERED=1
+
+PYTHON="$(command -v python3 || echo /usr/bin/python3)"
+CMD="${TRIM_APPDEST}/server/terminal-server.py"
+
+log_msg() {
+    mkdir -p "$(dirname "${LOG_FILE}")"
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> "${LOG_FILE}"
+}
+
+check_process() {
+    [ -n "$1" ] && kill -0 "$1" 2>/dev/null
+}
+
+status() {
+    if [ -f "${PID_FILE}" ]; then
+        pid=$(head -n 1 "${PID_FILE}" | tr -d '[:space:]')
+        if check_process "${pid}"; then
+            return 0
+        fi
+        rm -f "${PID_FILE}"
+    fi
+    return 3
+}
+
+start_process() {
+    if status; then
+        return 0
+    fi
+    if [ ! -f "${CMD}" ]; then
+        log_msg "server script not found: ${CMD}"
+        return 1
+    fi
+    rm -f "${SOCKET_PATH}"
+    mkdir -p "${TRIM_PKGVAR}"
+    log_msg "starting terminal server..."
+    nohup "${PYTHON}" "${CMD}" >> "${LOG_FILE}" 2>&1 &
+    local pid=$!
+    printf "%s" "${pid}" > "${PID_FILE}"
+    # 等待 socket 就绪
+    for i in $(seq 1 20); do
+        [ -S "${SOCKET_PATH}" ] && break
+        sleep 0.2
+    done
+    if ! check_process "${pid}"; then
+        log_msg "server exited immediately"
+        rm -f "${PID_FILE}"
+        return 1
+    fi
+    log_msg "started pid=${pid}"
+    return 0
+}
+
+stop_process() {
+    log_msg "stopping terminal server..."
+    if [ -r "${PID_FILE}" ]; then
+        pid=$(head -n 1 "${PID_FILE}" | tr -d '[:space:]')
+        if check_process "${pid}"; then
+            kill -TERM "${pid}" 2>/dev/null || true
+            local count=0
+            while check_process "${pid}" && [ ${count} -lt 10 ]; do
+                sleep 1
+                count=$((count + 1))
+            done
+            check_process "${pid}" && kill -KILL "${pid}" 2>/dev/null || true
+        fi
+        rm -f "${PID_FILE}"
+    fi
+    # 清理残留子 shell
+    pkill -f "terminal-server.py" 2>/dev/null || true
+    rm -f "${SOCKET_PATH}"
+    return 0
+}
+
+case "$1" in
+    start)
+        start_process && exit 0 || exit 1
+        ;;
+    stop)
+        stop_process
+        exit 0
+        ;;
+    status)
+        status
+        exit $?
+        ;;
+    restart)
+        stop_process
+        start_process && exit 0 || exit 1
+        ;;
+    *)
+        echo "usage: $0 {start|stop|status|restart}"
+        exit 1
+        ;;
+esac

@@ -1,0 +1,21 @@
+# 构建产物
+build/
+dist/
+*.deb
+*.fpk
+# 由 fpk/gen_index.py 生成的单文件页面
+fpk/app/www/index.html
+
+# 运行时状态
+sessconf.json
+*.sock
+*.log
+
+# Python
+__pycache__/
+*.pyc
+
+# 编辑器/系统
+.DS_Store
+.vscode/
+.idea/

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FineTerminal</title>
+<link rel="stylesheet" href="vendor/xterm.min.css">
+<style>
+:root { --bg:#16181d; --panel:#1e2128; --border:#2e3340; --fg:#d8dee9; --accent:#4fc3f7; }
+* { box-sizing:border-box; margin:0; padding:0; }
+html,body { height:100%; }
+body { background:var(--bg); color:var(--fg); font-family:system-ui,-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif; display:flex; flex-direction:column; overflow:hidden; }
+#tabbar { display:flex; align-items:center; background:var(--panel); border-bottom:1px solid var(--border); padding:4px 6px 0; gap:2px; flex:0 0 auto; }
+.tab { display:flex; align-items:center; gap:6px; padding:6px 10px; border:1px solid transparent; border-bottom:none; border-radius:6px 6px 0 0; cursor:pointer; font-size:13px; color:#9aa3b2; user-select:none; max-width:180px; }
+.tab.active { background:var(--bg); color:var(--fg); border-color:var(--border); }
+.tab .t { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.tab .x { opacity:.5; padding:0 2px; border-radius:4px; }
+.tab .x:hover { opacity:1; background:#e35; color:#fff; }
+#newtab { padding:6px 10px; color:var(--accent); cursor:pointer; font-size:15px; }
+#toolbar { display:flex; align-items:center; gap:6px; background:var(--panel); border-bottom:1px solid var(--border); padding:5px 8px; flex-wrap:wrap; flex:0 0 auto; font-size:12px; }
+#toolbar select, #toolbar button { background:#2a2f3a; color:var(--fg); border:1px solid var(--border); border-radius:5px; padding:3px 8px; font-size:12px; cursor:pointer; }
+#toolbar button:hover { border-color:var(--accent); }
+.quick { display:flex; align-items:center; gap:4px; margin-left:auto; }
+.quick input { background:#2a2f3a; border:1px solid var(--border); color:var(--fg); border-radius:5px; padding:3px 8px; width:170px; font-size:12px; }
+#persistLabel { display:flex; align-items:center; gap:4px; color:#9aa3b2; cursor:pointer; user-select:none; margin-left:auto; }
+#persistLabel input { accent-color:var(--accent); cursor:pointer; }
+#lock { position:fixed; inset:0; z-index:10000; background:rgba(10,12,16,.92); display:flex; align-items:center; justify-content:center; }
+#lock.hidden { display:none; }
+.lockbox { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:28px 32px; width:320px; display:flex; flex-direction:column; gap:10px; }
+.lockbox .lt { font-size:16px; font-weight:600; text-align:center; }
+.lockbox input { background:#2a2f3a; border:1px solid var(--border); color:var(--fg); border-radius:6px; padding:8px 10px; font-size:14px; }
+.lockbox input.hide { display:none; }
+.lockbox .le { color:#e74c3c; font-size:12px; min-height:16px; text-align:center; }
+.lockbox button { background:var(--accent); color:#10222c; border:none; border-radius:6px; padding:8px; font-size:14px; font-weight:600; cursor:pointer; }
+.lockbox button.hide { display:none; }
+#terms { position:relative; flex:1 1 auto; min-height:0; }
+.termwrap { position:absolute; inset:0; padding:4px 4px 0 8px; display:none; }
+.termwrap.active { display:block; }
+#toast { position:fixed; bottom:18px; left:50%; transform:translateX(-50%); background:#2a2f3a; border:1px solid var(--border); padding:8px 16px; border-radius:8px; font-size:13px; opacity:0; transition:opacity .3s; pointer-events:none; }
+#toast.show { opacity:1; }
+</style>
+</head>
+<body>
+<div id="tabbar"><span id="newtab" title="新建标签">＋</span></div>
+<div id="toolbar">
+  <select id="theme" title="配色方案"></select>
+  <button id="fminus" title="缩小字号">A－</button>
+  <button id="fplus" title="放大字号">A＋</button>
+  <button id="copy" title="复制选中内容">复制</button>
+  <button id="paste" title="粘贴">粘贴</button>
+  <button id="lockbtn" title="设置锁屏密码（保护 root 终端）">🔒</button>
+  <label id="persistLabel" title="关闭窗口后保留 shell 会话，下次打开自动恢复（10 分钟内重开有效）">
+    <input type="checkbox" id="persistToggle" checked>保留会话
+  </label>
+  <div class="quick">
+    <input id="qc" placeholder="快捷命令，回车发送">
+    <button id="qcsend">发送</button>
+  </div>
+</div>
+<div id="terms"></div>
+<div id="toast"></div>
+<div id="lock" class="hidden">
+  <div class="lockbox">
+    <div class="lt" id="lockTitle">🔒 终端已锁定</div>
+    <input type="password" id="lockPass" placeholder="密码">
+    <input type="password" id="lockPass2" class="hide" placeholder="再次输入密码">
+    <div class="le" id="lockErr"></div>
+    <button id="lockOk">解锁</button>
+    <button id="lockCancel" class="hide" style="background:#555;color:#ddd">取消</button>
+  </div>
+</div>
+<script src="vendor/xterm.js"></script>
+<script src="vendor/xterm-addon-fit.js"></script>
+<script src="vendor/xterm-addon-web-links.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

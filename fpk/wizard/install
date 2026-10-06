@@ -1,0 +1,11 @@
+[
+    {
+        "stepTitle": "欢迎使用飞牛终端",
+        "items": [
+            {
+                "type": "tips",
+                "helpText": "基于 xterm.js 的 Web 终端：支持多标签、配色主题、字号缩放与快捷命令。<br><strong>注意：</strong>终端以管理员权限运行，请勿暴露到公网。"
+            }
+        ]
+    }
+]

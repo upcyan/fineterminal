@@ -1,0 +1,15 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=FineTerminal
+Name[zh_CN]=飞牛终端
+GenericName=Terminal Emulator
+GenericName[zh_CN]=终端模拟器
+Comment=A multi-tab terminal for fnOS
+Comment[zh_CN]=fnOS 多标签终端，支持主题、快捷命令与锁屏
+Exec=fineterminal
+Icon=fineterminal
+Terminal=false
+Categories=System;TerminalEmulator;
+Keywords=terminal;shell;console;终端;
+StartupNotify=true

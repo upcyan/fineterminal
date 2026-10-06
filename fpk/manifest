@@ -1,0 +1,14 @@
+appname=fineterminal
+version=1.0.13
+display_name=飞牛终端 FineTerminal
+desc=基于 xterm.js 的 Web 终端：多标签、配色主题、字号缩放、快捷命令，浏览器与手机均可访问
+source=thirdparty
+platform=all
+maintainer=FineTerminal
+maintainer_url=https://www.fnnas.com
+os_min_version=1.1.8
+desktop_uidir=ui
+desktop_applaunchname=fineterminal.Application
+ctl_stop=true
+checkport=false
+changelog=1.0.13 修复手机 App 无法输入：WS 鉴权改为页面能力令牌（网关改写 Host 且不转发来源头，原判定失效）

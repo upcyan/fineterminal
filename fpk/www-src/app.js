@@ -92,6 +92,81 @@
     toastTimer = setTimeout(function () { toastEl.classList.remove("show"); }, 2200);
   }
 
+  // ---------- 复制（弹窗 + 剪贴板降级） ----------
+  var copyWin = document.getElementById("copywin");
+  var copyTextEl = document.getElementById("copyText");
+  var copyHint = document.getElementById("copyHint");
+
+  // 读取终端缓冲全部文本（含回滚历史）
+  function termAllText(term) {
+    var out = [];
+    try {
+      var buf = term.buffer.active;
+      for (var i = 0; i < buf.length; i++) {
+        var line = buf.getLine(i);
+        if (line) out.push(line.translateToString(true));
+      }
+      while (out.length && out[out.length - 1] === "") out.pop();
+    } catch (e) {
+      return term.getSelection() || "";
+    }
+    return out.join("\n");
+  }
+
+  function fallbackCopy(text) {
+    try {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.cssText = "position:fixed;top:0;left:0;opacity:0;";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      var ok = document.execCommand("copy");
+      ta.remove();
+      toast(ok ? "已复制" : "复制失败，请长按选择文本");
+      return ok;
+    } catch (e) {
+      toast("复制失败，请长按选择文本");
+      return false;
+    }
+  }
+
+  function copyText(text) {
+    if (!text) { toast("没有可复制的内容"); return; }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { toast("已复制"); })
+        .catch(function () { fallbackCopy(text); });
+    } else {
+      fallbackCopy(text);
+    }
+  }
+
+  function openCopyWin(tab) {
+    if (!tab) return;
+    var sel = tab.term.hasSelection() ? tab.term.getSelection() : "";
+    var full = termAllText(tab.term);
+    copyTextEl.textContent = full;
+    copyHint.textContent = sel
+      ? "已选中 " + sel.length + " 字符；下方为全部内容，可长按自由选择"
+      : "长按下方文字可自由选择部分内容";
+    copyWin.classList.remove("hidden");
+  }
+
+  function closeCopyWin() { copyWin.classList.add("hidden"); }
+
+  document.getElementById("copyClose").addEventListener("click", closeCopyWin);
+  copyWin.addEventListener("click", function (ev) { if (ev.target === copyWin) closeCopyWin(); });
+  document.getElementById("copySelectAll").addEventListener("click", function () {
+    var r = document.createRange();
+    r.selectNodeContents(copyTextEl);
+    var s = window.getSelection();
+    s.removeAllRanges();
+    s.addRange(r);
+  });
+  document.getElementById("copyAll").addEventListener("click", function () {
+    copyText(copyTextEl.textContent);
+  });
+
   // ---------- 应用密码锁 ----------
   var lockEl = document.getElementById("lock");
   var lockPass = document.getElementById("lockPass");
@@ -288,6 +363,32 @@
       tab.el = tabEl;
       tabbar.insertBefore(tabEl, newtabBtn);
 
+      // 移动端长按终端（未选中任何文字时）→ 弹出复制窗兜底。
+      // 触屏 WebView 里 xterm 的模拟选择常失效，长按是移动端的天然肌肉记忆。
+      var lpTimer = null, lpStart = null;
+      wrap.addEventListener("touchstart", function (ev) {
+        if (ev.touches.length !== 1) return;
+        lpStart = { x: ev.touches[0].clientX, y: ev.touches[0].clientY };
+        clearTimeout(lpTimer);
+        lpTimer = setTimeout(function () {
+          var nativeSel = (window.getSelection() && String(window.getSelection())) || "";
+          if (!nativeSel && !term.hasSelection()) openCopyWin(tab);
+        }, 500);
+      }, { passive: true });
+      wrap.addEventListener("touchmove", function (ev) {
+        if (!lpStart || !ev.touches.length) return;
+        var dx = ev.touches[0].clientX - lpStart.x;
+        var dy = ev.touches[0].clientY - lpStart.y;
+        if (Math.abs(dx) > 12 || Math.abs(dy) > 12) clearTimeout(lpTimer);
+      }, { passive: true });
+      ["touchend", "touchcancel"].forEach(function (tname) {
+        wrap.addEventListener(tname, function () {
+          clearTimeout(lpTimer);
+          lpTimer = null;
+          lpStart = null;
+        }, { passive: true });
+      });
+
       // 先激活（让容器可见），再 open —— 避免 0 尺寸初始化异常
       activate(tab);
       term.open(wrap);
@@ -407,9 +508,14 @@
   document.getElementById("fminus").addEventListener("click", function () { setFontSize(-1); });
 
   document.getElementById("copy").addEventListener("click", function () {
-    if (activeTab && activeTab.term.hasSelection()) {
-      navigator.clipboard.writeText(activeTab.term.getSelection()).then(function () { toast("已复制"); });
-    } else { toast("请先选中内容"); }
+    if (!activeTab) return;
+    if (activeTab.term.hasSelection()) {
+      // 已有选中：直接复制（桌面与移动端的快速路径）
+      copyText(activeTab.term.getSelection());
+    } else {
+      // 无选中（移动端选字困难的主场景）：弹出全部内容供自由复制
+      openCopyWin(activeTab);
+    }
   });
   document.getElementById("paste").addEventListener("click", function () {
     navigator.clipboard.readText().then(function (t) {

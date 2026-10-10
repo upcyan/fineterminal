@@ -38,6 +38,21 @@ body { background:var(--bg); color:var(--fg); font-family:system-ui,-apple-syste
 .termwrap.active { display:block; }
 #toast { position:fixed; bottom:18px; left:50%; transform:translateX(-50%); background:#2a2f3a; border:1px solid var(--border); padding:8px 16px; border-radius:8px; font-size:13px; opacity:0; transition:opacity .3s; pointer-events:none; }
 #toast.show { opacity:1; }
+/* 复制弹窗：显示终端全部内容，原生可选可复制 */
+#copywin { position:fixed; inset:0; z-index:10001; background:rgba(10,12,16,.92); display:flex; align-items:center; justify-content:center; padding:16px; }
+#copywin.hidden { display:none; }
+.copybox { background:var(--panel); border:1px solid var(--border); border-radius:12px; width:min(680px,100%); max-height:86vh; display:flex; flex-direction:column; padding:14px; gap:10px; }
+.copybox .cbtitle { font-weight:600; font-size:14px; }
+.copybox .cbhint { font-size:12px; color:#9aa3b2; }
+#copyText { flex:1 1 auto; min-height:120px; overflow:auto; background:#10131a; border:1px solid var(--border); border-radius:8px; padding:10px; font:13px/1.5 "Cascadia Mono",Consolas,"DejaVu Sans Mono",monospace; white-space:pre-wrap; word-break:break-all; color:var(--fg); -webkit-user-select:text; user-select:text; -webkit-touch-callout:default; }
+.cbrow { display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; }
+.cbrow button { background:#2a2f3a; color:var(--fg); border:1px solid var(--border); border-radius:6px; padding:7px 16px; font-size:13px; cursor:pointer; }
+.cbrow button.primary { background:var(--accent); color:#10222c; border:none; font-weight:600; }
+/* 移动端：xterm 默认 user-select:none 禁止原生选择，触屏 WebView 上其模拟
+   选择常失效导致无法选字——仅在粗指针（触屏）放开原生选择，桌面端不受影响 */
+@media (pointer: coarse) {
+  .xterm, .xterm * { -webkit-user-select: text !important; user-select: text !important; -webkit-touch-callout: default !important; }
+}
 </style>
 </head>
 <body>
@@ -46,7 +61,7 @@ body { background:var(--bg); color:var(--fg); font-family:system-ui,-apple-syste
   <select id="theme" title="配色方案"></select>
   <button id="fminus" title="缩小字号">A－</button>
   <button id="fplus" title="放大字号">A＋</button>
-  <button id="copy" title="复制选中内容">复制</button>
+  <button id="copy" title="复制选中内容；无选中时弹出全部内容">复制</button>
   <button id="paste" title="粘贴">粘贴</button>
   <button id="lockbtn" title="设置锁屏密码（保护 root 终端）">🔒</button>
   <label id="persistLabel" title="关闭窗口后保留 shell 会话，下次打开自动恢复（10 分钟内重开有效）">
@@ -67,6 +82,18 @@ body { background:var(--bg); color:var(--fg); font-family:system-ui,-apple-syste
     <div class="le" id="lockErr"></div>
     <button id="lockOk">解锁</button>
     <button id="lockCancel" class="hide" style="background:#555;color:#ddd">取消</button>
+  </div>
+</div>
+<div id="copywin" class="hidden">
+  <div class="copybox">
+    <div class="cbtitle">终端内容（可长按选择部分文字）</div>
+    <div class="cbhint" id="copyHint"></div>
+    <pre id="copyText"></pre>
+    <div class="cbrow">
+      <button id="copySelectAll">全选</button>
+      <button id="copyAll" class="primary">复制全部</button>
+      <button id="copyClose">关闭</button>
+    </div>
   </div>
 </div>
 <script src="vendor/xterm.js"></script>
